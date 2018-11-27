@@ -4,6 +4,8 @@ import (
 	"net/http"
 
 	"github.com/gorilla/websocket"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/go-park-mail-ru/2018_2_DeadMolesStudio/database"
 	"github.com/go-park-mail-ru/2018_2_DeadMolesStudio/logger"
@@ -11,11 +13,14 @@ import (
 	"github.com/go-park-mail-ru/2018_2_DeadMolesStudio/session"
 
 	"game/game"
+	"game/metrics"
 )
 
 func main() {
 	l := logger.InitLogger()
 	defer l.Sync()
+
+	prometheus.MustRegister(metrics.TotalRooms)
 
 	db := database.InitDB("postgres@postgres:5432", "ketnipz")
 	defer db.Close()
@@ -25,6 +30,8 @@ func main() {
 
 	g := game.InitGodGameObject()
 	go g.Run()
+
+	http.Handle("/metrics", promhttp.Handler())
 
 	http.HandleFunc("/game/ws", middleware.RecoverMiddleware(middleware.AccessLogMiddleware(
 		middleware.CORSMiddleware(middleware.SessionMiddleware(StartGame)))))

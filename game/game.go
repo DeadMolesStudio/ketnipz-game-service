@@ -4,6 +4,8 @@ import (
 	"sync"
 
 	"github.com/go-park-mail-ru/2018_2_DeadMolesStudio/logger"
+
+	"game/metrics"
 )
 
 const (
@@ -31,6 +33,7 @@ func (g *Game) Run() {
 			g.Rooms.Delete(rID)
 			g.TotalM.Lock()
 			g.Total--
+			metrics.SubtractRoomFromCounter()
 			g.TotalM.Unlock()
 			logger.Infof("closed room %v, total %v", rID, g.Total)
 		}
@@ -66,6 +69,7 @@ func (g *Game) findRoom() *Room {
 	g.Rooms.Range(func(k, v interface{}) bool {
 		rv := v.(*Room)
 		if rv.Total < MaxPlayers {
+			// TODO: kick dead players
 			r = rv
 			return false
 		}
@@ -82,6 +86,7 @@ func (g *Game) findRoom() *Room {
 	r = NewRoom()
 	g.TotalM.Lock()
 	g.Total++
+	metrics.AddRoomToCounter()
 	g.TotalM.Unlock()
 	g.Rooms.Store(r.ID, r)
 	logger.Infof("room %v created, total %v", r.ID, g.Total)
