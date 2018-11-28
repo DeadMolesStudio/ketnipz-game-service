@@ -34,7 +34,7 @@ func main() {
 	http.Handle("/metrics", promhttp.Handler())
 
 	http.HandleFunc("/game/ws", middleware.RecoverMiddleware(middleware.AccessLogMiddleware(
-		middleware.CORSMiddleware(middleware.SessionMiddleware(StartGame)))))
+		middleware.CORSMiddleware(middleware.SessionMiddleware(StartGame, sm)))))
 
 	logger.Info("starting server at: ", 8082)
 	logger.Panic(http.ListenAndServe(":8082", nil))
