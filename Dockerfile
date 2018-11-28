@@ -3,10 +3,8 @@ FROM golang:alpine as builder
 WORKDIR /src
 COPY . .
 
-RUN apk add --no-cache --virtual .build-deps \
-		git
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \ 
-	go build -a -installsuffix cgo -ldflags="-w -s" -o game-service
+	go build -mod vendor -a -installsuffix cgo -ldflags="-w -s" -o game-service
 
 FROM scratch
 
