@@ -1,0 +1,14 @@
+{
+    "level": "info",
+    "encoding": "json",
+    "outputPaths": ["stdout", "/var/log/dmstudio/server.log"],
+    "errorOutputPaths": ["stderr", "/var/log/dmstudio/server.log"],
+    "initialFields": {},
+    "encoderConfig": {
+        "messageKey": "message",
+        "levelKey": "level",
+        "levelEncoder": "lowercase",
+        "timeKey": "timestamp",
+        "timeEncoder": "iso8601"
+    }
+}
