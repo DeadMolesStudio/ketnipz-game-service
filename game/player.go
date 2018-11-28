@@ -30,11 +30,13 @@ type PlayerData struct {
 	Points   int
 }
 
+//easyjson:json
 // GotMessage is a message from client with hero action: move `LEFT`, `RIGHT` or `JUMP`
 type GotMessage struct {
 	Action string `json:"action"`
 }
 
+//easyjson:json
 type SentMessage struct {
 	Status  string      `json:"status"`
 	Payload interface{} `json:"payload,omitempty"`
@@ -43,7 +45,7 @@ type SentMessage struct {
 func (p *Player) Listen() {
 	for {
 		m := &GotMessage{}
-		err := p.UserInfo.Conn.ReadJSON(m)
+		_, raw, err := p.UserInfo.Conn.ReadMessage()
 		if err != nil {
 			if p.Room.Ctx.Err() != nil {
 				logger.Debugf("killed listen player %v at room %v", p.GameSessionID, p.Room.ID)
@@ -60,6 +62,11 @@ func (p *Player) Listen() {
 			}
 			return
 		}
+		err = m.UnmarshalJSON(raw)
+		if err != nil {
+			logger.Error(err)
+			continue
+		}
 
 		// TODO: game engine should validate state
 		p.Room.Change <- &State{}
@@ -70,7 +77,12 @@ func (p *Player) Send() {
 	for {
 		select {
 		case m := <-p.SendMessage:
-			err := p.UserInfo.Conn.WriteJSON(m)
+			j, err := m.MarshalJSON()
+			if err != nil {
+				logger.Error(err)
+				continue
+			}
+			err = p.UserInfo.Conn.WriteMessage(websocket.BinaryMessage, j)
 			if err != nil {
 				if websocket.IsUnexpectedCloseError(err) {
 					logger.Infof("player %v was disconnected (game session %v)", p.UserInfo.UID, p.GameSessionID)
