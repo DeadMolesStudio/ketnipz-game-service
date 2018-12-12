@@ -23,6 +23,7 @@ type Game struct {
 	CloseRoom chan string
 }
 
+// Run listens to channel Register (processes User) and CloseRoom (closes room with finished game).
 func (g *Game) Run() {
 	for {
 		select {
@@ -40,6 +41,7 @@ func (g *Game) Run() {
 	}
 }
 
+// processUser processes User to Room.
 func (g *Game) processUser(u *User) {
 	p := NewPlayer(u)
 	r := g.findRoom()
@@ -54,7 +56,7 @@ func (g *Game) processUser(u *User) {
 	r.TotalM.Unlock()
 	p.Room = r
 	go p.Send()
-	p.SendMessage <- &SentMessage{
+	p.SendMessage <- &WSMessageToSend{
 		Status: "connected",
 	}
 	logger.Infof("player %v (game session %v) joined room %v", p.UserInfo.UID, p.GameSessionID, r.ID)
@@ -64,12 +66,27 @@ func (g *Game) processUser(u *User) {
 	}
 }
 
+// findRoom searches for free room or creates new room.
 func (g *Game) findRoom() *Room {
 	var r *Room
 	g.Rooms.Range(func(k, v interface{}) bool {
 		rv := v.(*Room)
 		if rv.Total < MaxPlayers {
 			// TODO: kick dead players
+			// rv.Players.Range(func(k, v interface{}) bool {
+			// 	pv := v.(*Player)
+			// 	logger.Info(pv.UserInfo.Conn.RemoteAddr(), " ", pv.UserInfo.SessionID)
+			// 	if err := pv.UserInfo.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+			// 		// if err := pv.UserInfo.Conn.WriteControl(websocket.PingMessage, []byte{}, time.Now().Add(2*time.Second)); err != nil {
+			// 		logger.Infof("PING ERROR")
+			// 		r.Players.Delete(pv.GameSessionID)
+			// 		r.TotalM.Lock()
+			// 		r.Total--
+			// 		r.TotalM.Unlock()
+			// 		logger.Infof("player %v was disconnected (game session %v)", pv.UserInfo.UID, pv.GameSessionID)
+			// 	}
+			// 	return true
+			// })
 			r = rv
 			return false
 		}
@@ -94,16 +111,18 @@ func (g *Game) findRoom() *Room {
 	return r
 }
 
+// InitGodGameObject initializes new object of Game.
 func InitGodGameObject() *Game {
 	g = &Game{
 		Rooms:     &sync.Map{},
 		TotalM:    &sync.Mutex{},
-		Register:  make(chan *User),
-		CloseRoom: make(chan string),
+		Register:  make(chan *User, 1),
+		CloseRoom: make(chan string, 1),
 	}
 	return g
 }
 
+// AddPlayer processes User to Game.
 func AddPlayer(u *User) {
 	g.Register <- u
 }

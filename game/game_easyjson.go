@@ -7,6 +7,7 @@ import (
 	easyjson "github.com/mailru/easyjson"
 	jlexer "github.com/mailru/easyjson/jlexer"
 	jwriter "github.com/mailru/easyjson/jwriter"
+	time "time"
 )
 
 // suppress unused package warning
@@ -17,7 +18,7 @@ var (
 	_ easyjson.Marshaler
 )
 
-func easyjson85f0d656DecodeGameGame(in *jlexer.Lexer, out *SentMessage) {
+func easyjson85f0d656DecodeGameGame(in *jlexer.Lexer, out *WSMessageToSend) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -56,7 +57,7 @@ func easyjson85f0d656DecodeGameGame(in *jlexer.Lexer, out *SentMessage) {
 		in.Consumed()
 	}
 }
-func easyjson85f0d656EncodeGameGame(out *jwriter.Writer, in SentMessage) {
+func easyjson85f0d656EncodeGameGame(out *jwriter.Writer, in WSMessageToSend) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -90,29 +91,29 @@ func easyjson85f0d656EncodeGameGame(out *jwriter.Writer, in SentMessage) {
 }
 
 // MarshalJSON supports json.Marshaler interface
-func (v SentMessage) MarshalJSON() ([]byte, error) {
+func (v WSMessageToSend) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
 	easyjson85f0d656EncodeGameGame(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
-func (v SentMessage) MarshalEasyJSON(w *jwriter.Writer) {
+func (v WSMessageToSend) MarshalEasyJSON(w *jwriter.Writer) {
 	easyjson85f0d656EncodeGameGame(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
-func (v *SentMessage) UnmarshalJSON(data []byte) error {
+func (v *WSMessageToSend) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
 	easyjson85f0d656DecodeGameGame(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
-func (v *SentMessage) UnmarshalEasyJSON(l *jlexer.Lexer) {
+func (v *WSMessageToSend) UnmarshalEasyJSON(l *jlexer.Lexer) {
 	easyjson85f0d656DecodeGameGame(l, v)
 }
-func easyjson85f0d656DecodeGameGame1(in *jlexer.Lexer, out *GotMessage) {
+func easyjson85f0d656DecodeGameGame1(in *jlexer.Lexer, out *State) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -131,8 +132,80 @@ func easyjson85f0d656DecodeGameGame1(in *jlexer.Lexer, out *GotMessage) {
 			continue
 		}
 		switch key {
-		case "action":
-			out.Action = string(in.String())
+		case "player1":
+			if in.IsNull() {
+				in.Skip()
+				out.Player1 = nil
+			} else {
+				if out.Player1 == nil {
+					out.Player1 = new(PlayerData)
+				}
+				(*out.Player1).UnmarshalEasyJSON(in)
+			}
+		case "player2":
+			if in.IsNull() {
+				in.Skip()
+				out.Player2 = nil
+			} else {
+				if out.Player2 == nil {
+					out.Player2 = new(PlayerData)
+				}
+				(*out.Player2).UnmarshalEasyJSON(in)
+			}
+		case "products":
+			if in.IsNull() {
+				in.Skip()
+				out.Products = nil
+			} else {
+				in.Delim('[')
+				if out.Products == nil {
+					if !in.IsDelim(']') {
+						out.Products = make([]*ProductData, 0, 8)
+					} else {
+						out.Products = []*ProductData{}
+					}
+				} else {
+					out.Products = (out.Products)[:0]
+				}
+				for !in.IsDelim(']') {
+					var v1 *ProductData
+					if in.IsNull() {
+						in.Skip()
+						v1 = nil
+					} else {
+						if v1 == nil {
+							v1 = new(ProductData)
+						}
+						(*v1).UnmarshalEasyJSON(in)
+					}
+					out.Products = append(out.Products, v1)
+					in.WantComma()
+				}
+				in.Delim(']')
+			}
+		case "collected":
+			if in.IsNull() {
+				in.Skip()
+				out.Collected = nil
+			} else {
+				in.Delim('[')
+				if out.Collected == nil {
+					if !in.IsDelim(']') {
+						out.Collected = make([]PointsData, 0, 2)
+					} else {
+						out.Collected = []PointsData{}
+					}
+				} else {
+					out.Collected = (out.Collected)[:0]
+				}
+				for !in.IsDelim(']') {
+					var v2 PointsData
+					(v2).UnmarshalEasyJSON(in)
+					out.Collected = append(out.Collected, v2)
+					in.WantComma()
+				}
+				in.Delim(']')
+			}
 		default:
 			in.SkipRecursive()
 		}
@@ -143,19 +216,598 @@ func easyjson85f0d656DecodeGameGame1(in *jlexer.Lexer, out *GotMessage) {
 		in.Consumed()
 	}
 }
-func easyjson85f0d656EncodeGameGame1(out *jwriter.Writer, in GotMessage) {
+func easyjson85f0d656EncodeGameGame1(out *jwriter.Writer, in State) {
 	out.RawByte('{')
 	first := true
 	_ = first
 	{
-		const prefix string = ",\"action\":"
+		const prefix string = ",\"player1\":"
 		if first {
 			first = false
 			out.RawString(prefix[1:])
 		} else {
 			out.RawString(prefix)
 		}
-		out.String(string(in.Action))
+		if in.Player1 == nil {
+			out.RawString("null")
+		} else {
+			(*in.Player1).MarshalEasyJSON(out)
+		}
+	}
+	{
+		const prefix string = ",\"player2\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		if in.Player2 == nil {
+			out.RawString("null")
+		} else {
+			(*in.Player2).MarshalEasyJSON(out)
+		}
+	}
+	if len(in.Products) != 0 {
+		const prefix string = ",\"products\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		{
+			out.RawByte('[')
+			for v3, v4 := range in.Products {
+				if v3 > 0 {
+					out.RawByte(',')
+				}
+				if v4 == nil {
+					out.RawString("null")
+				} else {
+					(*v4).MarshalEasyJSON(out)
+				}
+			}
+			out.RawByte(']')
+		}
+	}
+	if len(in.Collected) != 0 {
+		const prefix string = ",\"collected\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		{
+			out.RawByte('[')
+			for v5, v6 := range in.Collected {
+				if v5 > 0 {
+					out.RawByte(',')
+				}
+				(v6).MarshalEasyJSON(out)
+			}
+			out.RawByte(']')
+		}
+	}
+	out.RawByte('}')
+}
+
+// MarshalJSON supports json.Marshaler interface
+func (v State) MarshalJSON() ([]byte, error) {
+	w := jwriter.Writer{}
+	easyjson85f0d656EncodeGameGame1(&w, v)
+	return w.Buffer.BuildBytes(), w.Error
+}
+
+// MarshalEasyJSON supports easyjson.Marshaler interface
+func (v State) MarshalEasyJSON(w *jwriter.Writer) {
+	easyjson85f0d656EncodeGameGame1(w, v)
+}
+
+// UnmarshalJSON supports json.Unmarshaler interface
+func (v *State) UnmarshalJSON(data []byte) error {
+	r := jlexer.Lexer{Data: data}
+	easyjson85f0d656DecodeGameGame1(&r, v)
+	return r.Error()
+}
+
+// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
+func (v *State) UnmarshalEasyJSON(l *jlexer.Lexer) {
+	easyjson85f0d656DecodeGameGame1(l, v)
+}
+func easyjson85f0d656DecodeGameGame2(in *jlexer.Lexer, out *StartInfo) {
+	isTopLevel := in.IsStart()
+	if in.IsNull() {
+		if isTopLevel {
+			in.Consumed()
+		}
+		in.Skip()
+		return
+	}
+	in.Delim('{')
+	for !in.IsDelim('}') {
+		key := in.UnsafeString()
+		in.WantColon()
+		if in.IsNull() {
+			in.Skip()
+			in.WantComma()
+			continue
+		}
+		switch key {
+		case "opponentId":
+			out.OpponentID = uint(in.Uint())
+		case "playerNum":
+			out.PlayerNum = uint(in.Uint())
+		case "stateConst":
+			if in.IsNull() {
+				in.Skip()
+				out.Constants = nil
+			} else {
+				if out.Constants == nil {
+					out.Constants = new(GameConst)
+				}
+				(*out.Constants).UnmarshalEasyJSON(in)
+			}
+		default:
+			in.SkipRecursive()
+		}
+		in.WantComma()
+	}
+	in.Delim('}')
+	if isTopLevel {
+		in.Consumed()
+	}
+}
+func easyjson85f0d656EncodeGameGame2(out *jwriter.Writer, in StartInfo) {
+	out.RawByte('{')
+	first := true
+	_ = first
+	{
+		const prefix string = ",\"opponentId\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Uint(uint(in.OpponentID))
+	}
+	{
+		const prefix string = ",\"playerNum\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Uint(uint(in.PlayerNum))
+	}
+	{
+		const prefix string = ",\"stateConst\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		if in.Constants == nil {
+			out.RawString("null")
+		} else {
+			(*in.Constants).MarshalEasyJSON(out)
+		}
+	}
+	out.RawByte('}')
+}
+
+// MarshalJSON supports json.Marshaler interface
+func (v StartInfo) MarshalJSON() ([]byte, error) {
+	w := jwriter.Writer{}
+	easyjson85f0d656EncodeGameGame2(&w, v)
+	return w.Buffer.BuildBytes(), w.Error
+}
+
+// MarshalEasyJSON supports easyjson.Marshaler interface
+func (v StartInfo) MarshalEasyJSON(w *jwriter.Writer) {
+	easyjson85f0d656EncodeGameGame2(w, v)
+}
+
+// UnmarshalJSON supports json.Unmarshaler interface
+func (v *StartInfo) UnmarshalJSON(data []byte) error {
+	r := jlexer.Lexer{Data: data}
+	easyjson85f0d656DecodeGameGame2(&r, v)
+	return r.Error()
+}
+
+// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
+func (v *StartInfo) UnmarshalEasyJSON(l *jlexer.Lexer) {
+	easyjson85f0d656DecodeGameGame2(l, v)
+}
+func easyjson85f0d656DecodeGameGame3(in *jlexer.Lexer, out *ProductData) {
+	isTopLevel := in.IsStart()
+	if in.IsNull() {
+		if isTopLevel {
+			in.Consumed()
+		}
+		in.Skip()
+		return
+	}
+	in.Delim('{')
+	for !in.IsDelim('}') {
+		key := in.UnsafeString()
+		in.WantColon()
+		if in.IsNull() {
+			in.Skip()
+			in.WantComma()
+			continue
+		}
+		switch key {
+		case "percentsX":
+			out.X = float64(in.Float64())
+		case "percentsY":
+			out.Y = float64(in.Float64())
+		case "type":
+			out.Type = int(in.Int())
+		default:
+			in.SkipRecursive()
+		}
+		in.WantComma()
+	}
+	in.Delim('}')
+	if isTopLevel {
+		in.Consumed()
+	}
+}
+func easyjson85f0d656EncodeGameGame3(out *jwriter.Writer, in ProductData) {
+	out.RawByte('{')
+	first := true
+	_ = first
+	{
+		const prefix string = ",\"percentsX\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Float64(float64(in.X))
+	}
+	{
+		const prefix string = ",\"percentsY\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Float64(float64(in.Y))
+	}
+	{
+		const prefix string = ",\"type\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Int(int(in.Type))
+	}
+	out.RawByte('}')
+}
+
+// MarshalJSON supports json.Marshaler interface
+func (v ProductData) MarshalJSON() ([]byte, error) {
+	w := jwriter.Writer{}
+	easyjson85f0d656EncodeGameGame3(&w, v)
+	return w.Buffer.BuildBytes(), w.Error
+}
+
+// MarshalEasyJSON supports easyjson.Marshaler interface
+func (v ProductData) MarshalEasyJSON(w *jwriter.Writer) {
+	easyjson85f0d656EncodeGameGame3(w, v)
+}
+
+// UnmarshalJSON supports json.Unmarshaler interface
+func (v *ProductData) UnmarshalJSON(data []byte) error {
+	r := jlexer.Lexer{Data: data}
+	easyjson85f0d656DecodeGameGame3(&r, v)
+	return r.Error()
+}
+
+// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
+func (v *ProductData) UnmarshalEasyJSON(l *jlexer.Lexer) {
+	easyjson85f0d656DecodeGameGame3(l, v)
+}
+func easyjson85f0d656DecodeGameGame4(in *jlexer.Lexer, out *PointsData) {
+	isTopLevel := in.IsStart()
+	if in.IsNull() {
+		if isTopLevel {
+			in.Consumed()
+		}
+		in.Skip()
+		return
+	}
+	in.Delim('{')
+	for !in.IsDelim('}') {
+		key := in.UnsafeString()
+		in.WantColon()
+		if in.IsNull() {
+			in.Skip()
+			in.WantComma()
+			continue
+		}
+		switch key {
+		case "percentsX":
+			out.X = float64(in.Float64())
+		case "percentsY":
+			out.Y = float64(in.Float64())
+		case "playerNum":
+			out.Who = int(in.Int())
+		case "points":
+			out.Points = int(in.Int())
+		default:
+			in.SkipRecursive()
+		}
+		in.WantComma()
+	}
+	in.Delim('}')
+	if isTopLevel {
+		in.Consumed()
+	}
+}
+func easyjson85f0d656EncodeGameGame4(out *jwriter.Writer, in PointsData) {
+	out.RawByte('{')
+	first := true
+	_ = first
+	{
+		const prefix string = ",\"percentsX\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Float64(float64(in.X))
+	}
+	{
+		const prefix string = ",\"percentsY\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Float64(float64(in.Y))
+	}
+	{
+		const prefix string = ",\"playerNum\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Int(int(in.Who))
+	}
+	{
+		const prefix string = ",\"points\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Int(int(in.Points))
+	}
+	out.RawByte('}')
+}
+
+// MarshalJSON supports json.Marshaler interface
+func (v PointsData) MarshalJSON() ([]byte, error) {
+	w := jwriter.Writer{}
+	easyjson85f0d656EncodeGameGame4(&w, v)
+	return w.Buffer.BuildBytes(), w.Error
+}
+
+// MarshalEasyJSON supports easyjson.Marshaler interface
+func (v PointsData) MarshalEasyJSON(w *jwriter.Writer) {
+	easyjson85f0d656EncodeGameGame4(w, v)
+}
+
+// UnmarshalJSON supports json.Unmarshaler interface
+func (v *PointsData) UnmarshalJSON(data []byte) error {
+	r := jlexer.Lexer{Data: data}
+	easyjson85f0d656DecodeGameGame4(&r, v)
+	return r.Error()
+}
+
+// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
+func (v *PointsData) UnmarshalEasyJSON(l *jlexer.Lexer) {
+	easyjson85f0d656DecodeGameGame4(l, v)
+}
+func easyjson85f0d656DecodeGameGame5(in *jlexer.Lexer, out *PlayerData) {
+	isTopLevel := in.IsStart()
+	if in.IsNull() {
+		if isTopLevel {
+			in.Consumed()
+		}
+		in.Skip()
+		return
+	}
+	in.Delim('{')
+	for !in.IsDelim('}') {
+		key := in.UnsafeString()
+		in.WantColon()
+		if in.IsNull() {
+			in.Skip()
+			in.WantComma()
+			continue
+		}
+		switch key {
+		case "score":
+			out.Score = int(in.Int())
+		case "percentsX":
+			out.X = float64(in.Float64())
+		case "percentsY":
+			out.Y = float64(in.Float64())
+		case "targetList":
+			if in.IsNull() {
+				in.Skip()
+				out.TargetList = nil
+			} else {
+				in.Delim('[')
+				if out.TargetList == nil {
+					if !in.IsDelim(']') {
+						out.TargetList = make([]int, 0, 8)
+					} else {
+						out.TargetList = []int{}
+					}
+				} else {
+					out.TargetList = (out.TargetList)[:0]
+				}
+				for !in.IsDelim(']') {
+					var v7 int
+					v7 = int(in.Int())
+					out.TargetList = append(out.TargetList, v7)
+					in.WantComma()
+				}
+				in.Delim(']')
+			}
+		default:
+			in.SkipRecursive()
+		}
+		in.WantComma()
+	}
+	in.Delim('}')
+	if isTopLevel {
+		in.Consumed()
+	}
+}
+func easyjson85f0d656EncodeGameGame5(out *jwriter.Writer, in PlayerData) {
+	out.RawByte('{')
+	first := true
+	_ = first
+	{
+		const prefix string = ",\"score\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Int(int(in.Score))
+	}
+	{
+		const prefix string = ",\"percentsX\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Float64(float64(in.X))
+	}
+	{
+		const prefix string = ",\"percentsY\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Float64(float64(in.Y))
+	}
+	{
+		const prefix string = ",\"targetList\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		if in.TargetList == nil && (out.Flags&jwriter.NilSliceAsEmpty) == 0 {
+			out.RawString("null")
+		} else {
+			out.RawByte('[')
+			for v8, v9 := range in.TargetList {
+				if v8 > 0 {
+					out.RawByte(',')
+				}
+				out.Int(int(v9))
+			}
+			out.RawByte(']')
+		}
+	}
+	out.RawByte('}')
+}
+
+// MarshalJSON supports json.Marshaler interface
+func (v PlayerData) MarshalJSON() ([]byte, error) {
+	w := jwriter.Writer{}
+	easyjson85f0d656EncodeGameGame5(&w, v)
+	return w.Buffer.BuildBytes(), w.Error
+}
+
+// MarshalEasyJSON supports easyjson.Marshaler interface
+func (v PlayerData) MarshalEasyJSON(w *jwriter.Writer) {
+	easyjson85f0d656EncodeGameGame5(w, v)
+}
+
+// UnmarshalJSON supports json.Unmarshaler interface
+func (v *PlayerData) UnmarshalJSON(data []byte) error {
+	r := jlexer.Lexer{Data: data}
+	easyjson85f0d656DecodeGameGame5(&r, v)
+	return r.Error()
+}
+
+// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
+func (v *PlayerData) UnmarshalEasyJSON(l *jlexer.Lexer) {
+	easyjson85f0d656DecodeGameGame5(l, v)
+}
+func easyjson85f0d656DecodeGameGame6(in *jlexer.Lexer, out *GotMessage) {
+	isTopLevel := in.IsStart()
+	if in.IsNull() {
+		if isTopLevel {
+			in.Consumed()
+		}
+		in.Skip()
+		return
+	}
+	in.Delim('{')
+	for !in.IsDelim('}') {
+		key := in.UnsafeString()
+		in.WantColon()
+		if in.IsNull() {
+			in.Skip()
+			in.WantComma()
+			continue
+		}
+		switch key {
+		case "actions":
+			out.Actions = Actions(in.Int())
+		default:
+			in.SkipRecursive()
+		}
+		in.WantComma()
+	}
+	in.Delim('}')
+	if isTopLevel {
+		in.Consumed()
+	}
+}
+func easyjson85f0d656EncodeGameGame6(out *jwriter.Writer, in GotMessage) {
+	out.RawByte('{')
+	first := true
+	_ = first
+	{
+		const prefix string = ",\"actions\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Int(int(in.Actions))
 	}
 	out.RawByte('}')
 }
@@ -163,23 +815,94 @@ func easyjson85f0d656EncodeGameGame1(out *jwriter.Writer, in GotMessage) {
 // MarshalJSON supports json.Marshaler interface
 func (v GotMessage) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
-	easyjson85f0d656EncodeGameGame1(&w, v)
+	easyjson85f0d656EncodeGameGame6(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
 func (v GotMessage) MarshalEasyJSON(w *jwriter.Writer) {
-	easyjson85f0d656EncodeGameGame1(w, v)
+	easyjson85f0d656EncodeGameGame6(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
 func (v *GotMessage) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
-	easyjson85f0d656DecodeGameGame1(&r, v)
+	easyjson85f0d656DecodeGameGame6(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
 func (v *GotMessage) UnmarshalEasyJSON(l *jlexer.Lexer) {
-	easyjson85f0d656DecodeGameGame1(l, v)
+	easyjson85f0d656DecodeGameGame6(l, v)
+}
+func easyjson85f0d656DecodeGameGame7(in *jlexer.Lexer, out *GameConst) {
+	isTopLevel := in.IsStart()
+	if in.IsNull() {
+		if isTopLevel {
+			in.Consumed()
+		}
+		in.Skip()
+		return
+	}
+	in.Delim('{')
+	for !in.IsDelim('}') {
+		key := in.UnsafeString()
+		in.WantColon()
+		if in.IsNull() {
+			in.Skip()
+			in.WantComma()
+			continue
+		}
+		switch key {
+		case "gameTime":
+			out.GameTime = time.Duration(in.Int64())
+		default:
+			in.SkipRecursive()
+		}
+		in.WantComma()
+	}
+	in.Delim('}')
+	if isTopLevel {
+		in.Consumed()
+	}
+}
+func easyjson85f0d656EncodeGameGame7(out *jwriter.Writer, in GameConst) {
+	out.RawByte('{')
+	first := true
+	_ = first
+	{
+		const prefix string = ",\"gameTime\":"
+		if first {
+			first = false
+			out.RawString(prefix[1:])
+		} else {
+			out.RawString(prefix)
+		}
+		out.Int64(int64(in.GameTime))
+	}
+	out.RawByte('}')
+}
+
+// MarshalJSON supports json.Marshaler interface
+func (v GameConst) MarshalJSON() ([]byte, error) {
+	w := jwriter.Writer{}
+	easyjson85f0d656EncodeGameGame7(&w, v)
+	return w.Buffer.BuildBytes(), w.Error
+}
+
+// MarshalEasyJSON supports easyjson.Marshaler interface
+func (v GameConst) MarshalEasyJSON(w *jwriter.Writer) {
+	easyjson85f0d656EncodeGameGame7(w, v)
+}
+
+// UnmarshalJSON supports json.Unmarshaler interface
+func (v *GameConst) UnmarshalJSON(data []byte) error {
+	r := jlexer.Lexer{Data: data}
+	easyjson85f0d656DecodeGameGame7(&r, v)
+	return r.Error()
+}
+
+// UnmarshalEasyJSON supports easyjson.Unmarshaler interface
+func (v *GameConst) UnmarshalEasyJSON(l *jlexer.Lexer) {
+	easyjson85f0d656DecodeGameGame7(l, v)
 }

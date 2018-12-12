@@ -13,9 +13,6 @@ import (
 
 const (
 	MaxPlayers = 2
-
-	MsPerFrame = 20 * time.Millisecond // 50 fps
-	GameTime   = 5 * time.Second
 )
 
 type Room struct {
@@ -23,7 +20,7 @@ type Room struct {
 	Players *sync.Map
 	Total   int
 	TotalM  *sync.Mutex
-	Ticker  *time.Ticker
+	ticker  *time.Ticker
 
 	Ctx    context.Context
 	cancel func()
@@ -32,12 +29,14 @@ type Room struct {
 	Change   chan *State
 	GameOver chan *GameOver
 
+	engine    *GameEngine
 	RoomState *State
-	Timer     *time.Timer
 }
 
-type State struct {
-	Data []PlayerData
+//easyjson:json
+type WSMessageToSend struct {
+	Status  string      `json:"status"`
+	Payload interface{} `json:"payload,omitempty"`
 }
 
 const (
@@ -46,59 +45,104 @@ const (
 	Disconnected
 )
 
+//easyjson:json
+type StartInfo struct {
+	OpponentID uint       `json:"opponentId"`
+	PlayerNum  uint       `json:"playerNum"`
+	Constants  *GameConst `json:"stateConst"`
+}
+
+//easyjson:json
+type GameConst struct {
+	GameTime time.Duration `json:"gameTime"`
+}
+
 type GameOver struct {
 	Reason int
 	Info   interface{}
 }
 
+// Run runs the game in the room.
 func (r *Room) Run() {
 	logger.Infof("game started in room %v", r.ID)
+	var player1, player2 *Player
+	i := 1
 	r.Players.Range(func(k, v interface{}) bool {
 		player := v.(*Player)
+		if i == 1 {
+			player1 = player
+		} else {
+			player2 = player
+		}
+		i++
 		go player.Listen()
 		return true
 	})
+	var err error
+	r.engine, err = NewGameEngine(r, player1, player2)
+	if err != nil {
+		logger.Errorf("engine cannot be created: %v", err)
+		return
+	}
+
+	player1.SendMessage <- &WSMessageToSend{
+		Status: "started",
+		Payload: &StartInfo{
+			OpponentID: player2.UserInfo.UID,
+			PlayerNum:  1,
+			Constants: &GameConst{
+				GameTime: GameTime,
+			},
+		},
+	}
+	player2.SendMessage <- &WSMessageToSend{
+		Status: "started",
+		Payload: &StartInfo{
+			OpponentID: player1.UserInfo.UID,
+			PlayerNum:  2,
+			Constants: &GameConst{
+				GameTime: GameTime,
+			},
+		},
+	}
 	go r.listenForStateChanges()
-	r.Ticker = time.NewTicker(MsPerFrame)
-	r.Timer = time.NewTimer(GameTime)
-	logger.Infof("timer (%v) started in room %v", GameTime, r.ID)
+	wg := &sync.WaitGroup{} // wait for engine start
+	wg.Add(1)
+	go r.engine.Run(wg)
+	wg.Wait()
+	r.ticker = time.NewTicker(MsPerFrame)
 	for {
 		select {
-		case <-r.Ticker.C:
+		case <-r.ticker.C:
 			logger.Debugf("room %v tick", r.ID)
-			r.broadcast(&SentMessage{
+			r.broadcast(&WSMessageToSend{
 				Status:  "state",
 				Payload: r.RoomState,
 			})
-		case <-r.Timer.C:
-			// TODO: move to game engine
-			logger.Infof("timer in room %v: time out", r.ID)
-			r.finish(&GameOver{
-				Reason: TimeOver,
-			})
-			return
 		case res := <-r.GameOver:
+			logger.Infof("got gameover signal in room %v", r.ID)
 			r.finish(res)
 			return
 		}
 	}
 }
 
+// listenForStateChanges listens to Change channel (changes instance of game state).
 func (r *Room) listenForStateChanges() {
 	for {
 		select {
 		case s := <-r.Change:
-			logger.Infof("got game state %v", s)
+			logger.Debugf("got game state %v", s)
 			r.RoomState = s
 		case <-r.Ctx.Done():
-			// <-r.GameOver
 			logger.Debugf("killed listen at room %v", r.ID)
 			return
 		}
 	}
 }
 
-func (r *Room) broadcast(m *SentMessage) {
+// broadcast sends the message WSMessageToSend to all players in the room.
+func (r *Room) broadcast(m *WSMessageToSend) {
 	r.Players.Range(func(k, v interface{}) bool {
 		player := v.(*Player)
 		player.SendMessage <- m
@@ -106,25 +150,20 @@ func (r *Room) broadcast(m *SentMessage) {
 	})
 }
 
+// finish finishes the game in the room.
 func (r *Room) finish(res *GameOver) {
-	r.Ticker.Stop()
-	r.Timer.Stop()
+	r.ticker.Stop()
 	switch res.Reason {
-	case Success:
-		logger.Infof("room %v: game over with success", r.ID)
-		r.broadcast(&SentMessage{
-			Status: "game_over",
-		})
 	case TimeOver:
 		logger.Infof("room %v: game over with time over", r.ID)
-		r.broadcast(&SentMessage{
+		r.broadcast(&WSMessageToSend{
 			Status: "time_over",
 		})
 	case Disconnected:
 		left := res.Info.(*Player)
 		r.Players.Delete(left.GameSessionID)
 		logger.Infof("room %v: game over with disconnection of player %v (game session %v)", r.ID, left.UserInfo.UID, left.GameSessionID)
-		r.broadcast(&SentMessage{
+		r.broadcast(&WSMessageToSend{
 			Status: "disconnected",
 		})
 	}
@@ -145,16 +184,18 @@ func (r *Room) finish(res *GameOver) {
 	g.CloseRoom <- r.ID
 }
 
+// NewRoom initializes new object of Room.
 func NewRoom() *Room {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Room{
-		ID:       uuid.NewV4().String(),
-		Players:  &sync.Map{},
-		TotalM:   &sync.Mutex{},
-		Ctx:      ctx,
-		cancel:   cancel,
-		Register: make(chan *Player),
-		Change:   make(chan *State),
-		GameOver: make(chan *GameOver),
+		ID:        uuid.NewV4().String(),
+		Players:   &sync.Map{},
+		TotalM:    &sync.Mutex{},
+		Ctx:       ctx,
+		cancel:    cancel,
+		Register:  make(chan *Player, 1),
+		Change:    make(chan *State, 1),
+		GameOver:  make(chan *GameOver, 1),
+		RoomState: new(State),
 	}
 }

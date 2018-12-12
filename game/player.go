@@ -1,6 +1,8 @@
 package game
 
 import (
+	"time"
+
 	"github.com/gorilla/websocket"
 	uuid "github.com/satori/go.uuid"
 
@@ -18,30 +20,22 @@ type Player struct {
 
 	GameSessionID string
 	Room          *Room
-	Data          PlayerData
 
-	Disconnect  chan struct{}
-	SendMessage chan *SentMessage
-}
-
-type PlayerData struct {
-	Username string
-	Lives    int
-	Points   int
+	SendMessage chan *WSMessageToSend
 }
 
 //easyjson:json
-// GotMessage is a message from client with hero action: move `LEFT`, `RIGHT` or `JUMP`
+// GotMessage is a message from client with hero Action: move `LEFT`, `RIGHT` or `JUMP`.
 type GotMessage struct {
-	Action string `json:"action"`
+	Actions Actions `json:"actions"`
 }
 
-//easyjson:json
-type SentMessage struct {
-	Status  string      `json:"status"`
-	Payload interface{} `json:"payload,omitempty"`
+type ProcessActions struct {
+	From string
+	Actions
 }
 
+// Listen reads messages from player and breaks the loop when player disconnects or game in room ended.
 func (p *Player) Listen() {
 	for {
 		m := &GotMessage{}
@@ -52,7 +46,7 @@ func (p *Player) Listen() {
 				return
 			}
 			if websocket.IsUnexpectedCloseError(err) {
-				logger.Infof("player %v was disconnected (game session %v)", p.UserInfo.UID, p.GameSessionID)
+				logger.Infof("listen: player %v was disconnected (game session %v)", p.UserInfo.UID, p.GameSessionID)
 			} else {
 				logger.Error(err)
 			}
@@ -67,12 +61,18 @@ func (p *Player) Listen() {
 			logger.Error(err)
 			continue
 		}
+		logger.Debugf("got correct message with action %v from %v", m.Actions, p.GameSessionID)
 
-		// TODO: game engine should validate state
-		p.Room.Change <- &State{}
+		if p.Room.engine != nil {
+			p.Room.engine.Update <- &ProcessActions{
+				From:    p.GameSessionID,
+				Actions: m.Actions,
+			}
+		}
 	}
 }
 
+// Send writes every message from SendMessage channel to player and breaks the loop when game in room ends.
 func (p *Player) Send() {
 	for {
 		select {
@@ -82,10 +82,12 @@ func (p *Player) Send() {
 				logger.Error(err)
 				continue
 			}
-			err = p.UserInfo.Conn.WriteMessage(websocket.BinaryMessage, j)
+			// kick players with low network
+			p.UserInfo.Conn.SetWriteDeadline(time.Now().Add(1 * time.Second))
+			err = p.UserInfo.Conn.WriteMessage(websocket.TextMessage, j)
 			if err != nil {
 				if websocket.IsUnexpectedCloseError(err) {
-					logger.Infof("player %v was disconnected (game session %v)", p.UserInfo.UID, p.GameSessionID)
+					logger.Infof("send: player %v was disconnected (game session %v)", p.UserInfo.UID, p.GameSessionID)
 				} else {
 					logger.Error(err)
 				}
@@ -102,10 +104,11 @@ func (p *Player) Send() {
 	}
 }
 
+// NewPlayer initializes new object of Player with given User.
 func NewPlayer(u *User) *Player {
 	return &Player{
 		UserInfo:      u,
 		GameSessionID: uuid.NewV4().String(),
-		SendMessage:   make(chan *SentMessage, 100),
+		SendMessage:   make(chan *WSMessageToSend, 100),
 	}
 }
