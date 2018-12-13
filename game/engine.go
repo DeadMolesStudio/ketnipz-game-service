@@ -164,7 +164,7 @@ func (e *GameEngine) randomTarget() {
 		X:     rand.Float64()*90 + 5, // [5, 95]
 		Y:     100,
 		Type:  rand.Intn(TargetVariaty) + 1,
-		speed: ProductSpeed + rand.Float64()*ProductSpeed,
+		speed: ProductSpeed + rand.Float64()*ProductSpeed/2,
 	}
 	logger.Infof("new product is %v", t)
 	e.state.Products = append(e.state.Products, t)
