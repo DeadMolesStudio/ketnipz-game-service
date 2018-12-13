@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
-	"sync"
 	"time"
 
 	"github.com/go-park-mail-ru/2018_2_DeadMolesStudio/logger"
@@ -71,7 +70,6 @@ type Actions int // byte mask
 
 type GameEngine struct {
 	Players map[string]int
-	r       *Room
 
 	Update chan *ProcessActions
 
@@ -79,47 +77,6 @@ type GameEngine struct {
 	ticker     *time.Ticker
 	randomizer *time.Ticker
 	state      *State
-}
-
-// Run start the game engine.
-func (e *GameEngine) Run(wg *sync.WaitGroup) {
-	// Initial state
-	e.state = NewInitialState()
-	e.r.Change <- e.state
-
-	e.ticker = time.NewTicker(MsPerFrame)
-	e.randomizer = time.NewTicker(TargetRandomsEvery)
-	e.timer = time.NewTimer(GameTime)
-	wg.Done()
-	for {
-		select {
-		case <-e.ticker.C:
-			e.updateState()
-			e.r.Change <- e.state
-		case <-e.randomizer.C:
-			logger.Debug("new product incoming")
-			e.randomTarget()
-		case <-e.timer.C:
-			logger.Info("time over in game engine")
-			e.ticker.Stop()
-			e.randomizer.Stop()
-			e.timer.Stop()
-			e.r.GameOver <- &GameOver{
-				Reason: TimeOver,
-				Info:   e.Players,
-			}
-			logger.Info("end of game engine")
-			return
-		case a := <-e.Update:
-			e.doAction(a)
-		case <-e.r.Ctx.Done():
-			e.ticker.Stop()
-			e.randomizer.Stop()
-			e.timer.Stop()
-			logger.Info("end of game engine")
-			return
-		}
-	}
 }
 
 // updateState updates game room state (products move, players and products collide,
@@ -305,7 +262,7 @@ func NewGameEngine(r *Room, p1, p2 *Player) (*GameEngine, error) {
 	ge := &GameEngine{
 		Players: make(map[string]int),
 		Update:  make(chan *ProcessActions, 100),
-		r:       r,
+		state:   NewInitialState(),
 	}
 
 	ge.Players[p1.GameSessionID] = 1

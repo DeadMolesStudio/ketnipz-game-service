@@ -50,10 +50,7 @@ func (p *Player) Listen() {
 			} else {
 				logger.Error(err)
 			}
-			p.Room.GameOver <- &GameOver{
-				Reason: Disconnected,
-				Info:   p,
-			}
+			p.Room.Unregister <- p
 			return
 		}
 		err = m.UnmarshalJSON(raw)
@@ -91,10 +88,7 @@ func (p *Player) Send() {
 				} else {
 					logger.Error(err)
 				}
-				p.Room.GameOver <- &GameOver{
-					Reason: Disconnected,
-					Info:   p,
-				}
+				p.Room.Unregister <- p
 				return
 			}
 		case <-p.Room.Ctx.Done():

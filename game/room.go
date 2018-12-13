@@ -20,17 +20,13 @@ type Room struct {
 	Players *sync.Map
 	Total   int
 	TotalM  *sync.Mutex
-	ticker  *time.Ticker
 
 	Ctx    context.Context
 	cancel func()
 
-	Register chan *Player
-	Change   chan *State
-	GameOver chan *GameOver
+	Unregister chan *Player
 
-	engine    *GameEngine
-	RoomState *State
+	engine *GameEngine
 }
 
 //easyjson:json
@@ -105,37 +101,38 @@ func (r *Room) Run() {
 			},
 		},
 	}
-	go r.listenForStateChanges()
-	wg := &sync.WaitGroup{} // wait for engine start
-	wg.Add(1)
-	go r.engine.Run(wg)
-	wg.Wait()
-	r.ticker = time.NewTicker(MsPerFrame)
+
+	// run game engine
+	r.engine.ticker = time.NewTicker(MsPerFrame)
+	r.engine.randomizer = time.NewTicker(TargetRandomsEvery)
+	r.engine.timer = time.NewTimer(GameTime)
 	for {
 		select {
-		case <-r.ticker.C:
+		case <-r.engine.ticker.C:
 			logger.Debugf("room %v tick", r.ID)
 			r.broadcast(&WSMessageToSend{
 				Status:  "state",
-				Payload: r.RoomState,
+				Payload: r.engine.state,
 			})
-		case res := <-r.GameOver:
-			logger.Infof("got gameover signal in room %v", r.ID)
-			r.finish(res)
+			r.engine.updateState()
+		case <-r.engine.randomizer.C:
+			logger.Debug("new product incoming")
+			r.engine.randomTarget()
+		case <-r.engine.timer.C:
+			logger.Info("time over in game engine")
+			r.finish(&GameOver{
+				Reason: TimeOver,
+			})
+			logger.Info("end of game engine")
 			return
-		}
-	}
-}
-
-// listenForStateChanges listens to Change channel (changes instance of game state).
-func (r *Room) listenForStateChanges() {
-	for {
-		select {
-		case s := <-r.Change:
-			logger.Debugf("got game state %v", s)
-			r.RoomState = s
-		case <-r.Ctx.Done():
-			logger.Debugf("killed listen at room %v", r.ID)
+		case a := <-r.engine.Update:
+			r.engine.doAction(a)
+		case p := <-r.Unregister:
+			logger.Infof("player disconnected signal in room %v", r.ID)
+			r.finish(&GameOver{
+				Reason: Disconnected,
+				Info:   p,
+			})
 			return
 		}
 	}
@@ -152,7 +149,9 @@ func (r *Room) broadcast(m *WSMessageToSend) {
 
 // finish finishes the game in the room.
 func (r *Room) finish(res *GameOver) {
-	r.ticker.Stop()
+	r.engine.ticker.Stop()
+	r.engine.randomizer.Stop()
+	r.engine.timer.Stop()
 	switch res.Reason {
 	case TimeOver:
 		logger.Infof("room %v: game over with time over", r.ID)
@@ -188,14 +187,11 @@ func (r *Room) finish(res *GameOver) {
 func NewRoom() *Room {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Room{
-		ID:        uuid.NewV4().String(),
-		Players:   &sync.Map{},
-		TotalM:    &sync.Mutex{},
-		Ctx:       ctx,
-		cancel:    cancel,
-		Register:  make(chan *Player, 1),
-		Change:    make(chan *State, 1),
-		GameOver:  make(chan *GameOver, 1),
-		RoomState: new(State),
+		ID:         uuid.NewV4().String(),
+		Players:    &sync.Map{},
+		TotalM:     &sync.Mutex{},
+		Ctx:        ctx,
+		cancel:     cancel,
+		Unregister: make(chan *Player, 1),
 	}
 }
