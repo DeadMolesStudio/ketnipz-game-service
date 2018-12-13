@@ -102,10 +102,10 @@ func (e *GameEngine) updateState() {
 		}
 	}
 	if player1.speedY != 0 {
-		performJump(player1)
+		player1.performJump()
 	}
 	if player2.speedY != 0 {
-		performJump(player2)
+		player2.performJump()
 	}
 	if len(player1.TargetList) == 0 {
 		player1.TargetList = generateNewProductList()
@@ -215,7 +215,7 @@ func objectsCollide(product *ProductData, player *PlayerData) bool {
 }
 
 // performJump moves player in Y dimension and reduces his Y-speed.
-func performJump(player *PlayerData) {
+func (player *PlayerData) performJump() {
 	player.Y += player.speedY
 	player.speedY -= PlayerGravity
 	if player.Y <= PlayerBaseY {
