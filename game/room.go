@@ -112,7 +112,7 @@ func (r *Room) Run() {
 			logger.Debugf("room %v tick", r.ID)
 			r.broadcast(&WSMessageToSend{
 				Status:  "state",
-				Payload: r.engine.state,
+				Payload: r.engine.state.copyState(),
 			})
 			r.engine.updateState()
 		case <-r.engine.randomizer.C:

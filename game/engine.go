@@ -254,6 +254,38 @@ func (e *GameEngine) countPoints(caught *ProductData, player *PlayerData, player
 	}
 }
 
+// copyState returns deep copy of state
+func (src *State) copyState() *State {
+	dst := &State{
+		Player1: &PlayerData{
+			Score:      src.Player1.Score,
+			X:          src.Player1.X,
+			Y:          src.Player1.Y,
+			TargetList: make([]int, len(src.Player1.TargetList)),
+			speedY:     src.Player1.speedY,
+		},
+		Player2: &PlayerData{
+			Score:      src.Player2.Score,
+			X:          src.Player2.X,
+			Y:          src.Player2.Y,
+			TargetList: make([]int, len(src.Player2.TargetList)),
+			speedY:     src.Player2.speedY,
+		},
+		Products:  make([]*ProductData, 0, len(src.Products)),
+		Collected: make([]PointsData, len(src.Collected)),
+	}
+	copy(dst.Player1.TargetList, src.Player1.TargetList)
+	copy(dst.Player2.TargetList, src.Player2.TargetList)
+	for _, v := range src.Products {
+		p := &ProductData{}
+		*p = *v
+		dst.Products = append(dst.Products, p)
+	}
+	copy(dst.Collected, src.Collected)
+
+	return dst
+}
+
 // NewGameEngine initializes new object of GameEngine with given room and players.
 func NewGameEngine(r *Room, p1, p2 *Player) (*GameEngine, error) {
 	if p1 == nil || p2 == nil {
