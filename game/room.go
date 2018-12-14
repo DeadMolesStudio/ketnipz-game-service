@@ -173,6 +173,7 @@ func (r *Room) finish(res *GameOver) {
 	r.Players.Range(func(k, v interface{}) bool {
 		player := v.(*Player)
 		// graceful disconnect
+		player.UserInfo.Conn.SetWriteDeadline(time.Now().Add(1 * time.Second))
 		player.UserInfo.Conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 		time.Sleep(1 * time.Second)
 		player.UserInfo.Conn.Close()

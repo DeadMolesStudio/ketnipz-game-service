@@ -2,6 +2,9 @@ package game
 
 import (
 	"sync"
+	"time"
+
+	"github.com/gorilla/websocket"
 
 	"github.com/go-park-mail-ru/2018_2_DeadMolesStudio/logger"
 
@@ -29,7 +32,7 @@ func (g *Game) Run() {
 		select {
 		case u := <-g.Register:
 			logger.Infof("game got new ws connection, user %v, session_id %v", u.UID, u.SessionID)
-			g.processUser(u)
+			go g.processUser(u)
 		case rID := <-g.CloseRoom:
 			g.Rooms.Delete(rID)
 			g.TotalM.Lock()
@@ -44,9 +47,27 @@ func (g *Game) Run() {
 // processUser processes User to Room.
 func (g *Game) processUser(u *User) {
 	p := NewPlayer(u)
-	r := g.findRoom()
-	if r == nil {
-		logger.Error("max count of rooms")
+	r, err := g.findRoom(p)
+	if err != nil {
+		switch err {
+		case ErrMaxRooms:
+			logger.Error(err)
+		case ErrIsPlaying:
+			logger.Infof("player with id %v is already playing", u.UID)
+			m := &WSMessageToSend{
+				Status: "playing",
+			}
+			j, err := m.MarshalJSON()
+			if err != nil {
+				logger.Error(err)
+			}
+			u.Conn.SetWriteDeadline(time.Now().Add(1 * time.Second))
+			u.Conn.WriteMessage(websocket.TextMessage, j)
+			u.Conn.SetWriteDeadline(time.Now().Add(1 * time.Second))
+			u.Conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+			time.Sleep(1 * time.Second)
+			u.Conn.Close()
+		}
 		return
 	}
 
@@ -67,10 +88,19 @@ func (g *Game) processUser(u *User) {
 }
 
 // findRoom searches for free room or creates new room.
-func (g *Game) findRoom() *Room {
+func (g *Game) findRoom(p *Player) (*Room, error) {
 	var r *Room
+	var err error
 	g.Rooms.Range(func(k, v interface{}) bool {
 		rv := v.(*Room)
+		rv.Players.Range(func(k, v interface{}) bool {
+			pv := v.(*Player)
+			if pv.UserInfo.UID == p.UserInfo.UID {
+				err = ErrIsPlaying
+				return false
+			}
+			return true
+		})
 		if rv.Total < MaxPlayers {
 			// TODO: kick dead players
 			// rv.Players.Range(func(k, v interface{}) bool {
@@ -93,11 +123,14 @@ func (g *Game) findRoom() *Room {
 		return true
 	})
 
+	if err != nil {
+		return nil, err
+	}
 	if r != nil {
-		return r
+		return r, nil
 	}
 	if g.Total >= MaxRooms {
-		return nil
+		return nil, ErrMaxRooms
 	}
 
 	r = NewRoom()
@@ -108,7 +141,7 @@ func (g *Game) findRoom() *Room {
 	g.Rooms.Store(r.ID, r)
 	logger.Infof("room %v created, total %v", r.ID, g.Total)
 
-	return r
+	return r, nil
 }
 
 // InitGodGameObject initializes new object of Game.
