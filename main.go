@@ -22,13 +22,13 @@ func main() {
 
 	prometheus.MustRegister(metrics.TotalRooms)
 
-	db := database.InitDB("postgres@postgres:5432", "ketnipz")
-	defer db.Close()
+	dm := database.InitDatabaseManager("postgres@postgres:5432", "ketnipz")
+	defer dm.Close()
 
 	sm := session.ConnectSessionManager()
 	defer sm.Close()
 
-	g := game.InitGodGameObject()
+	g := game.InitGodGameObject(dm)
 	go g.Run()
 
 	http.Handle("/metrics", promhttp.Handler())

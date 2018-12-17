@@ -77,6 +77,7 @@ type GameEngine struct {
 	ticker     *time.Ticker
 	randomizer *time.Ticker
 	state      *State
+	status     *GameOver
 }
 
 // updateState updates game room state (products move, players and products collide,

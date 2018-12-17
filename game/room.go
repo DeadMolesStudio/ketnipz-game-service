@@ -166,6 +166,7 @@ func (r *Room) finish(res *GameOver) {
 			Status: "disconnected",
 		})
 	}
+	r.engine.status = res
 
 	time.Sleep(1 * time.Second)
 	r.cancel()
@@ -181,7 +182,7 @@ func (r *Room) finish(res *GameOver) {
 		return true
 	})
 	logger.Infof("stopped room %v", r.ID)
-	g.CloseRoom <- r.ID
+	g.CloseRoom <- r
 }
 
 // NewRoom initializes new object of Room.
