@@ -35,24 +35,25 @@ const (
 //easyjson:json
 type PlayerData struct {
 	Score      int     `json:"score"`
-	X          float64 `json:"percentsX"`  // 0-100
-	Y          float64 `json:"percentsY"`  // 0-100
+	X          float64 `json:"X"`          // 0-100
+	Y          float64 `json:"Y"`          // 0-100
 	TargetList []int   `json:"targetList"` // 1-6
 	speedY     float64 // jump
+	jumps      bool
 }
 
 //easyjson:json
 type ProductData struct {
-	X     float64 `json:"percentsX"` // 0-100
-	Y     float64 `json:"percentsY"` // 0-100
-	Type  int     `json:"type"`      // 1-6
+	X     float64 `json:"X"`    // 0-100
+	Y     float64 `json:"Y"`    // 0-100
+	Type  int     `json:"type"` // 1-6
 	speed float64 // speed of product
 }
 
 //easyjson:json
 type PointsData struct {
-	X      float64 `json:"percentsX"` // 0-100
-	Y      float64 `json:"percentsY"` // 0-100
+	X      float64 `json:"X"`         // 0-100
+	Y      float64 `json:"Y"`         // 0-100
 	Who    int     `json:"playerNum"` // 1 or 2 (player number who catched)
 	Points int     `json:"points"`    // points of catched item (-1, +3)
 }
@@ -88,7 +89,7 @@ func (e *GameEngine) updateState() {
 	player2 := s.Player2
 	s.Collected = s.Collected[:0] // clear points on screen
 	for i := len(s.Products) - 1; i >= 0; i-- {
-		s.Products[i].Y -= s.Products[i].speed
+		s.Products[i].Y = math.Round((s.Products[i].Y-s.Products[i].speed)*100) / 100
 		p1caught := objectsCollide(s.Products[i], player1)
 		p2caught := objectsCollide(s.Products[i], player2)
 		if p1caught {
@@ -102,10 +103,10 @@ func (e *GameEngine) updateState() {
 			s.Products = append(s.Products[:i], s.Products[i+1:]...)
 		}
 	}
-	if player1.speedY != 0 {
+	if player1.jumps {
 		player1.performJump()
 	}
-	if player2.speedY != 0 {
+	if player2.jumps {
 		player2.performJump()
 	}
 	if len(player1.TargetList) == 0 {
@@ -119,10 +120,10 @@ func (e *GameEngine) updateState() {
 // randomTarget randoms new target (product) and appends it to the slice of products.
 func (e *GameEngine) randomTarget() {
 	t := &ProductData{
-		X:     rand.Float64()*90 + 5, // [5, 95]
+		X:     math.Round((rand.Float64()*90+5)*100) / 100, // [5, 95]
 		Y:     100,
 		Type:  rand.Intn(TargetVariaty) + 1,
-		speed: ProductSpeed + rand.Float64()*ProductSpeed/2,
+		speed: math.Round((ProductSpeed+rand.Float64()*ProductSpeed/2)*100) / 100,
 	}
 	logger.Infof("new product is %v", t)
 	e.state.Products = append(e.state.Products, t)
@@ -141,27 +142,30 @@ func (e *GameEngine) doAction(a *ProcessActions) {
 	switch a.Actions {
 	case 1:
 		logger.Debugf("the hero %v moves right", uGameID)
-		player.X = math.Min(100, player.X+PlayerSpeed)
+		player.X = math.Min(100, math.Round((player.X+PlayerSpeed)*100)/100)
 	case 10, 111:
 		logger.Debugf("the hero %v jumps", uGameID)
-		if player.speedY == 0 {
+		if !player.jumps {
 			player.speedY = PlayerJumpSpeed
+			player.jumps = true
 		}
 	case 100:
 		logger.Debugf("the hero %v moves left", uGameID)
-		player.X = math.Max(0, player.X-PlayerSpeed)
+		player.X = math.Max(0, math.Round((player.X-PlayerSpeed)*100)/100)
 	case 11:
 		logger.Debugf("the hero %v moves right and jumps", uGameID)
-		if player.speedY == 0 {
+		if !player.jumps {
 			player.speedY = PlayerJumpSpeed
+			player.jumps = true
 		}
-		player.X = math.Min(100, player.X+PlayerSpeed)
+		player.X = math.Min(100, math.Round((player.X+PlayerSpeed)*100)/100)
 	case 110:
 		logger.Debugf("the hero %v moves left and jumps", uGameID)
-		if player.speedY == 0 {
+		if !player.jumps {
 			player.speedY = PlayerJumpSpeed
+			player.jumps = true
 		}
-		player.X = math.Max(0, player.X-PlayerSpeed)
+		player.X = math.Max(0, math.Round((player.X-PlayerSpeed)*100)/100)
 	case 0, 101: // should not be sent from front-end
 		logger.Debugf("the hero %v stands still, nothing to do", uGameID)
 	default:
@@ -217,10 +221,11 @@ func objectsCollide(product *ProductData, player *PlayerData) bool {
 
 // performJump moves player in Y dimension and reduces his Y-speed.
 func (player *PlayerData) performJump() {
-	player.Y += player.speedY
-	player.speedY -= PlayerGravity
+	player.Y = math.Round((player.Y+player.speedY)*100) / 100
+	player.speedY = math.Round((player.speedY-PlayerGravity)*100) / 100
 	if player.Y <= PlayerBaseY {
 		player.speedY = 0
+		player.jumps = false
 		player.Y = PlayerBaseY
 	}
 }

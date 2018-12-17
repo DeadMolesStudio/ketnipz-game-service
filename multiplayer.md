@@ -39,28 +39,28 @@
     "payload": {
         "player1": {
             "score": 10,
-            "percentsX": 50, // 0-100
-            "percentsY": 10, // 0-100
+            "X": 50, // 0-100
+            "Y": 10, // 0-100
             "targetList": [1, 2, 6, 3] // 1-6
         },
         "player2": {
             "score": 15,
-            "percentsX": 50, // 0-100
-            "percentsY": 10, // 0-100
+            "X": 50, // 0-100
+            "Y": 10, // 0-100
             "targetList": [1, 2, 6, 3] // 1-6
         },
         "products": [
             {
-                "percentsX": 50, // 0-100
-                "percentsY": 10, // 0-100
+                "X": 50, // 0-100
+                "Y": 10, // 0-100
                 "type": 2 // 1-6
             },
             ...
         ],
         "collected": [
             {
-                "percentsX": 50, // 0-100
-                "percentsY": 10, // 0-100
+                "X": 50, // 0-100
+                "Y": 10, // 0-100
                 "playerNum": 1, // 1 или 2 кто собрал
                 "points": -1 // int очки за собранный продукт
             },

@@ -442,9 +442,9 @@ func easyjson85f0d656DecodeGameGame3(in *jlexer.Lexer, out *ProductData) {
 			continue
 		}
 		switch key {
-		case "percentsX":
+		case "X":
 			out.X = float64(in.Float64())
-		case "percentsY":
+		case "Y":
 			out.Y = float64(in.Float64())
 		case "type":
 			out.Type = int(in.Int())
@@ -463,7 +463,7 @@ func easyjson85f0d656EncodeGameGame3(out *jwriter.Writer, in ProductData) {
 	first := true
 	_ = first
 	{
-		const prefix string = ",\"percentsX\":"
+		const prefix string = ",\"X\":"
 		if first {
 			first = false
 			out.RawString(prefix[1:])
@@ -473,7 +473,7 @@ func easyjson85f0d656EncodeGameGame3(out *jwriter.Writer, in ProductData) {
 		out.Float64(float64(in.X))
 	}
 	{
-		const prefix string = ",\"percentsY\":"
+		const prefix string = ",\"Y\":"
 		if first {
 			first = false
 			out.RawString(prefix[1:])
@@ -537,9 +537,9 @@ func easyjson85f0d656DecodeGameGame4(in *jlexer.Lexer, out *PointsData) {
 			continue
 		}
 		switch key {
-		case "percentsX":
+		case "X":
 			out.X = float64(in.Float64())
-		case "percentsY":
+		case "Y":
 			out.Y = float64(in.Float64())
 		case "playerNum":
 			out.Who = int(in.Int())
@@ -560,7 +560,7 @@ func easyjson85f0d656EncodeGameGame4(out *jwriter.Writer, in PointsData) {
 	first := true
 	_ = first
 	{
-		const prefix string = ",\"percentsX\":"
+		const prefix string = ",\"X\":"
 		if first {
 			first = false
 			out.RawString(prefix[1:])
@@ -570,7 +570,7 @@ func easyjson85f0d656EncodeGameGame4(out *jwriter.Writer, in PointsData) {
 		out.Float64(float64(in.X))
 	}
 	{
-		const prefix string = ",\"percentsY\":"
+		const prefix string = ",\"Y\":"
 		if first {
 			first = false
 			out.RawString(prefix[1:])
@@ -646,9 +646,9 @@ func easyjson85f0d656DecodeGameGame5(in *jlexer.Lexer, out *PlayerData) {
 		switch key {
 		case "score":
 			out.Score = int(in.Int())
-		case "percentsX":
+		case "X":
 			out.X = float64(in.Float64())
-		case "percentsY":
+		case "Y":
 			out.Y = float64(in.Float64())
 		case "targetList":
 			if in.IsNull() {
@@ -698,7 +698,7 @@ func easyjson85f0d656EncodeGameGame5(out *jwriter.Writer, in PlayerData) {
 		out.Int(int(in.Score))
 	}
 	{
-		const prefix string = ",\"percentsX\":"
+		const prefix string = ",\"X\":"
 		if first {
 			first = false
 			out.RawString(prefix[1:])
@@ -708,7 +708,7 @@ func easyjson85f0d656EncodeGameGame5(out *jwriter.Writer, in PlayerData) {
 		out.Float64(float64(in.X))
 	}
 	{
-		const prefix string = ",\"percentsY\":"
+		const prefix string = ",\"Y\":"
 		if first {
 			first = false
 			out.RawString(prefix[1:])
