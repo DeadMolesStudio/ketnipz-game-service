@@ -345,7 +345,7 @@ func easyjson85f0d656DecodeGameGame2(in *jlexer.Lexer, out *StartInfo) {
 				out.Constants = nil
 			} else {
 				if out.Constants == nil {
-					out.Constants = new(GameConst)
+					out.Constants = new(Const)
 				}
 				(*out.Constants).UnmarshalEasyJSON(in)
 			}
@@ -835,7 +835,7 @@ func (v *GotMessage) UnmarshalJSON(data []byte) error {
 func (v *GotMessage) UnmarshalEasyJSON(l *jlexer.Lexer) {
 	easyjson85f0d656DecodeGameGame6(l, v)
 }
-func easyjson85f0d656DecodeGameGame7(in *jlexer.Lexer, out *GameConst) {
+func easyjson85f0d656DecodeGameGame7(in *jlexer.Lexer, out *Const) {
 	isTopLevel := in.IsStart()
 	if in.IsNull() {
 		if isTopLevel {
@@ -866,7 +866,7 @@ func easyjson85f0d656DecodeGameGame7(in *jlexer.Lexer, out *GameConst) {
 		in.Consumed()
 	}
 }
-func easyjson85f0d656EncodeGameGame7(out *jwriter.Writer, in GameConst) {
+func easyjson85f0d656EncodeGameGame7(out *jwriter.Writer, in Const) {
 	out.RawByte('{')
 	first := true
 	_ = first
@@ -884,25 +884,25 @@ func easyjson85f0d656EncodeGameGame7(out *jwriter.Writer, in GameConst) {
 }
 
 // MarshalJSON supports json.Marshaler interface
-func (v GameConst) MarshalJSON() ([]byte, error) {
+func (v Const) MarshalJSON() ([]byte, error) {
 	w := jwriter.Writer{}
 	easyjson85f0d656EncodeGameGame7(&w, v)
 	return w.Buffer.BuildBytes(), w.Error
 }
 
 // MarshalEasyJSON supports easyjson.Marshaler interface
-func (v GameConst) MarshalEasyJSON(w *jwriter.Writer) {
+func (v Const) MarshalEasyJSON(w *jwriter.Writer) {
 	easyjson85f0d656EncodeGameGame7(w, v)
 }
 
 // UnmarshalJSON supports json.Unmarshaler interface
-func (v *GameConst) UnmarshalJSON(data []byte) error {
+func (v *Const) UnmarshalJSON(data []byte) error {
 	r := jlexer.Lexer{Data: data}
 	easyjson85f0d656DecodeGameGame7(&r, v)
 	return r.Error()
 }
 
 // UnmarshalEasyJSON supports easyjson.Unmarshaler interface
-func (v *GameConst) UnmarshalEasyJSON(l *jlexer.Lexer) {
+func (v *Const) UnmarshalEasyJSON(l *jlexer.Lexer) {
 	easyjson85f0d656DecodeGameGame7(l, v)
 }

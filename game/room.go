@@ -26,7 +26,7 @@ type Room struct {
 
 	Unregister chan *Player
 
-	engine *GameEngine
+	engine *Engine
 }
 
 //easyjson:json
@@ -43,17 +43,17 @@ const (
 
 //easyjson:json
 type StartInfo struct {
-	OpponentID uint       `json:"opponentId"`
-	PlayerNum  uint       `json:"playerNum"`
-	Constants  *GameConst `json:"stateConst"`
+	OpponentID uint   `json:"opponentId"`
+	PlayerNum  uint   `json:"playerNum"`
+	Constants  *Const `json:"stateConst"`
 }
 
 //easyjson:json
-type GameConst struct {
+type Const struct {
 	GameTime time.Duration `json:"gameTime"`
 }
 
-type GameOver struct {
+type Ended struct {
 	Reason int
 	Info   interface{}
 }
@@ -75,7 +75,7 @@ func (r *Room) Run() {
 		return true
 	})
 	var err error
-	r.engine, err = NewGameEngine(r, player1, player2)
+	r.engine, err = NewEngine(r, player1, player2)
 	if err != nil {
 		logger.Errorf("engine cannot be created: %v", err)
 		return
@@ -86,7 +86,7 @@ func (r *Room) Run() {
 		Payload: &StartInfo{
 			OpponentID: player2.UserInfo.UID,
 			PlayerNum:  1,
-			Constants: &GameConst{
+			Constants: &Const{
 				GameTime: GameTime,
 			},
 		},
@@ -96,7 +96,7 @@ func (r *Room) Run() {
 		Payload: &StartInfo{
 			OpponentID: player1.UserInfo.UID,
 			PlayerNum:  2,
-			Constants: &GameConst{
+			Constants: &Const{
 				GameTime: GameTime,
 			},
 		},
@@ -120,7 +120,7 @@ func (r *Room) Run() {
 			r.engine.randomTarget()
 		case <-r.engine.timer.C:
 			logger.Info("time over in game engine")
-			r.finish(&GameOver{
+			r.finish(&Ended{
 				Reason: TimeOver,
 			})
 			logger.Info("end of game engine")
@@ -129,7 +129,7 @@ func (r *Room) Run() {
 			r.engine.doAction(a)
 		case p := <-r.Unregister:
 			logger.Infof("player disconnected signal in room %v", r.ID)
-			r.finish(&GameOver{
+			r.finish(&Ended{
 				Reason: Disconnected,
 				Info:   p,
 			})
@@ -148,7 +148,7 @@ func (r *Room) broadcast(m *WSMessageToSend) {
 }
 
 // finish finishes the game in the room.
-func (r *Room) finish(res *GameOver) {
+func (r *Room) finish(res *Ended) {
 	r.engine.ticker.Stop()
 	r.engine.randomizer.Stop()
 	r.engine.timer.Stop()

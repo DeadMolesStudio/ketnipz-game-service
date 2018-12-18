@@ -69,7 +69,7 @@ type State struct {
 // Actions are move `LEFT`, `RIGHT` or `JUMP`
 type Actions int // byte mask
 
-type GameEngine struct {
+type Engine struct {
 	Players map[string]int
 
 	Update chan *ProcessActions
@@ -78,12 +78,12 @@ type GameEngine struct {
 	ticker     *time.Ticker
 	randomizer *time.Ticker
 	state      *State
-	status     *GameOver
+	status     *Ended
 }
 
 // updateState updates game room state (products move, players and products collide,
 // products disappear, points appear, etc.).
-func (e *GameEngine) updateState() {
+func (e *Engine) updateState() {
 	s := e.state
 	player1 := s.Player1
 	player2 := s.Player2
@@ -118,7 +118,7 @@ func (e *GameEngine) updateState() {
 }
 
 // randomTarget randoms new target (product) and appends it to the slice of products.
-func (e *GameEngine) randomTarget() {
+func (e *Engine) randomTarget() {
 	t := &ProductData{
 		X:     math.Round((rand.Float64()*90+5)*100) / 100, // [5, 95]
 		Y:     100,
@@ -130,7 +130,7 @@ func (e *GameEngine) randomTarget() {
 }
 
 // doAction updates player's position: moves him left, right or performs jump.
-func (e *GameEngine) doAction(a *ProcessActions) {
+func (e *Engine) doAction(a *ProcessActions) {
 	uGameID := a.From
 	playerNumber := e.Players[uGameID]
 	var player *PlayerData
@@ -233,7 +233,7 @@ func (player *PlayerData) performJump() {
 // countPoints checks if the product is in player's target list and adds
 // PlayerSuccessPoints to his score and deletes from the list if it is or
 // reduces the score by PlayerFailurePoints. Points are displayed at the product location.
-func (e *GameEngine) countPoints(caught *ProductData, player *PlayerData, playerNum int) {
+func (e *Engine) countPoints(caught *ProductData, player *PlayerData, playerNum int) {
 	itemIsInList := false
 	for i := len(player.TargetList) - 1; i >= 0; i-- {
 		if caught.Type == player.TargetList[i] {
@@ -292,12 +292,12 @@ func (src *State) copyState() *State {
 	return dst
 }
 
-// NewGameEngine initializes new object of GameEngine with given room and players.
-func NewGameEngine(r *Room, p1, p2 *Player) (*GameEngine, error) {
+// NewEngine initializes new object of Engine with given room and players.
+func NewEngine(r *Room, p1, p2 *Player) (*Engine, error) {
 	if p1 == nil || p2 == nil {
 		return nil, fmt.Errorf("players' data is not valid")
 	}
-	ge := &GameEngine{
+	ge := &Engine{
 		Players: make(map[string]int),
 		Update:  make(chan *ProcessActions, 100),
 		state:   NewInitialState(),

@@ -1,6 +1,14 @@
 .git/
 .gitignore
 
+.travis.yml
+*.enc
+
+Dockerfile
+.dockerignore
+
+.golangci.yml
+
 # GoLand
 .idea/
 
