@@ -1,0 +1,38 @@
+language: go
+go:
+  - "1.11.4"
+
+services:
+- docker
+
+branches:
+  only:
+  - master
+
+env:
+  - GO111MODULE=on
+
+sudo: required
+
+before_script:
+- curl -sfL https://install.goreleaser.com/github.com/golangci/golangci-lint.sh | sh -s -- -b $GOPATH/bin v1.12.3
+- echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin
+- ssh-keyscan -H $DEPLOY_SSH_ADDRESS >> ~/.ssh/known_hosts
+- chmod 600 ~/.ssh/2018_2_DeadMolesStudio_id_rsa.pem
+
+script:
+- golangci-lint -v run
+- docker pull deadmolesstudio/ketnipz-game-service || true
+- docker build --cache-from deadmolesstudio/ketnipz-game-service -t deadmolesstudio/ketnipz-game-service .
+- docker push deadmolesstudio/ketnipz-game-service
+- ssh -i ~/.ssh/2018_2_DeadMolesStudio_id_rsa.pem root@$DEPLOY_SSH_ADDRESS ' 
+  docker pull deadmolesstudio/ketnipz-game-service; 
+  cd /opt/dmstudio/common; 
+  docker-compose up -d --no-deps --build game-service'
+
+before_install:
+- openssl aes-256-cbc -K $encrypted_8765226a70e6_key -iv $encrypted_8765226a70e6_iv
+  -in 2018_2_DeadMolesStudio_id_rsa.pem.enc -out ~/.ssh/2018_2_DeadMolesStudio_id_rsa.pem
+  -d
+
+install: true # skip base installation
