@@ -18,7 +18,12 @@ import (
 
 func main() {
 	l := logger.InitLogger()
-	defer l.Sync()
+	defer func() {
+		err := l.Sync()
+		if err != nil {
+			logger.Errorf("error while syncing log data: %v", err)
+		}
+	}()
 
 	prometheus.MustRegister(metrics.TotalRooms)
 

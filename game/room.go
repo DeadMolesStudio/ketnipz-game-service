@@ -161,7 +161,8 @@ func (r *Room) finish(res *Ended) {
 	case Disconnected:
 		left := res.Info.(*Player)
 		r.Players.Delete(left.GameSessionID)
-		logger.Infof("room %v: game over with disconnection of player %v (game session %v)", r.ID, left.UserInfo.UID, left.GameSessionID)
+		logger.Infof("room %v: game over with disconnection of player %v (game session %v)",
+			r.ID, left.UserInfo.UID, left.GameSessionID)
 		r.broadcast(&WSMessageToSend{
 			Status: "disconnected",
 		})
@@ -174,11 +175,13 @@ func (r *Room) finish(res *Ended) {
 	r.Players.Range(func(k, v interface{}) bool {
 		player := v.(*Player)
 		// graceful disconnect
-		player.UserInfo.Conn.SetWriteDeadline(time.Now().Add(1 * time.Second))
-		player.UserInfo.Conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+		_ = player.UserInfo.Conn.SetWriteDeadline(time.Now().Add(1 * time.Second))
+		_ = player.UserInfo.Conn.WriteMessage(websocket.CloseMessage,
+			websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 		time.Sleep(1 * time.Second)
 		player.UserInfo.Conn.Close()
-		logger.Infof("room %v: server disconnected player %v (game session %v)", r.ID, player.UserInfo.UID, player.GameSessionID)
+		logger.Infof("room %v: server disconnected player %v (game session %v)",
+			r.ID, player.UserInfo.UID, player.GameSessionID)
 		return true
 	})
 	logger.Infof("stopped room %v", r.ID)

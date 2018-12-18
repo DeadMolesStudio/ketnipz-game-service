@@ -80,7 +80,7 @@ func (p *Player) Send() {
 				continue
 			}
 			// kick players with low network
-			p.UserInfo.Conn.SetWriteDeadline(time.Now().Add(1 * time.Second))
+			_ = p.UserInfo.Conn.SetWriteDeadline(time.Now().Add(1 * time.Second))
 			err = p.UserInfo.Conn.WriteMessage(websocket.TextMessage, j)
 			if err != nil {
 				if websocket.IsUnexpectedCloseError(err) {

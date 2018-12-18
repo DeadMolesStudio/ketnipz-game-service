@@ -68,10 +68,10 @@ func (g *Game) processUser(u *User) {
 			if err != nil {
 				logger.Error(err)
 			}
-			u.Conn.SetWriteDeadline(time.Now().Add(1 * time.Second))
-			u.Conn.WriteMessage(websocket.TextMessage, j)
-			u.Conn.SetWriteDeadline(time.Now().Add(1 * time.Second))
-			u.Conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+			_ = u.Conn.SetWriteDeadline(time.Now().Add(1 * time.Second))
+			_ = u.Conn.WriteMessage(websocket.TextMessage, j)
+			_ = u.Conn.SetWriteDeadline(time.Now().Add(1 * time.Second))
+			_ = u.Conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 			time.Sleep(1 * time.Second)
 			u.Conn.Close()
 		}
@@ -114,7 +114,8 @@ func (g *Game) findRoom(p *Player) (*Room, error) {
 			// 	pv := v.(*Player)
 			// 	logger.Info(pv.UserInfo.Conn.RemoteAddr(), " ", pv.UserInfo.SessionID)
 			// 	if err := pv.UserInfo.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
-			// 		// if err := pv.UserInfo.Conn.WriteControl(websocket.PingMessage, []byte{}, time.Now().Add(2*time.Second)); err != nil {
+			// 		if err := pv.UserInfo.Conn.WriteControl(
+			// 			websocket.PingMessage, []byte{}, time.Now().Add(2*time.Second)); err != nil {
 			// 		logger.Infof("PING ERROR")
 			// 		r.Players.Delete(pv.GameSessionID)
 			// 		r.TotalM.Lock()
