@@ -18,7 +18,7 @@ const (
 	KeyUserID
 )
 
-func CORSMiddleware(next http.HandlerFunc) http.HandlerFunc {
+func CORSMiddleware(next http.Handler) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Origin", "https://dmstudio.now.sh")
@@ -35,7 +35,7 @@ func CORSMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	})
 }
 
-func SessionMiddleware(next http.HandlerFunc, sm *session.SessionManager) http.HandlerFunc {
+func SessionMiddleware(next http.Handler, sm *session.SessionManager) http.HandlerFunc {
 	// middleware
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
@@ -64,7 +64,7 @@ func SessionMiddleware(next http.HandlerFunc, sm *session.SessionManager) http.H
 	})
 }
 
-func RecoverMiddleware(next http.HandlerFunc) http.HandlerFunc {
+func RecoverMiddleware(next http.Handler) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
@@ -76,7 +76,7 @@ func RecoverMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	})
 }
 
-func AccessLogMiddleware(next http.HandlerFunc) http.HandlerFunc {
+func AccessLogMiddleware(next http.Handler) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		next.ServeHTTP(w, r)

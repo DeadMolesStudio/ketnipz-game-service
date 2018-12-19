@@ -10,25 +10,26 @@ import (
 	"github.com/go-park-mail-ru/2018_2_DeadMolesStudio/logger"
 )
 
+// nolint: golint
 type SessionManager struct {
 	smc      SessionManagerClient
 	grpcConn *grpc.ClientConn
 }
 
-func ConnectSessionManager() *SessionManager {
+func ConnectSessionManager(address string) *SessionManager {
 	grpcConn, err := grpc.Dial(
-		"auth-service:8081",
+		address,
 		grpc.WithInsecure(),
 		grpc.WithBlock(),
-		grpc.WithTimeout(30*time.Second),
+		grpc.WithTimeout(30*time.Second), // nolint: megacheck
 	)
 	if err != nil {
-		logger.Panic("failed to connect to sessionManager: ", err)
+		logger.Panicf("failed to connect to sessionManager at address %v: %v", address, err)
 	}
 
 	smc := NewSessionManagerClient(grpcConn)
 
-	logger.Infof("Successfully connected to sessionManager: %v", 8081)
+	logger.Infof("Successfully connected to sessionManager: %v", address)
 
 	return &SessionManager{smc: smc, grpcConn: grpcConn}
 }

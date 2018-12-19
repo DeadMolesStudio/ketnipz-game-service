@@ -1,6 +1,6 @@
 # github.com/beorn7/perks v0.0.0-20180321164747-3a771d992973
 github.com/beorn7/perks/quantile
-# github.com/go-park-mail-ru/2018_2_DeadMolesStudio v0.0.0-20181206215325-605cd80bce44
+# github.com/go-park-mail-ru/2018_2_DeadMolesStudio v0.0.0-20181219111707-a354e634a7fa
 github.com/go-park-mail-ru/2018_2_DeadMolesStudio/database
 github.com/go-park-mail-ru/2018_2_DeadMolesStudio/logger
 github.com/go-park-mail-ru/2018_2_DeadMolesStudio/middleware

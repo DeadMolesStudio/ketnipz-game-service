@@ -7,6 +7,7 @@ import (
 	"github.com/go-park-mail-ru/2018_2_DeadMolesStudio/logger"
 )
 
+// nolint: golint
 type DatabaseManager struct {
 	db *sqlx.DB
 }
@@ -26,7 +27,7 @@ func InitDatabaseManager(address, database string) *DatabaseManager {
 
 	logger.Infof("Successfully connected to %v, database %v", address, database)
 
-	dm.makeMigrations()
+	_ = dm.makeMigrations()
 
 	return dm
 }

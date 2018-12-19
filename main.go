@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"net/http"
 
 	"github.com/gorilla/websocket"
@@ -17,6 +18,11 @@ import (
 )
 
 func main() {
+	dbConnStr := flag.String("db_connstr", "postgres@localhost:5432", "postgresql connection string")
+	dbName := flag.String("db_name", "postgres", "database name")
+	authConnStr := flag.String("auth_connstr", "localhost:8081", "auth-service connection string")
+	flag.Parse()
+
 	l := logger.InitLogger()
 	defer func() {
 		err := l.Sync()
@@ -27,10 +33,10 @@ func main() {
 
 	prometheus.MustRegister(metrics.TotalRooms)
 
-	dm := database.InitDatabaseManager("postgres@postgres:5432", "ketnipz")
+	dm := database.InitDatabaseManager(*dbConnStr, *dbName)
 	defer dm.Close()
 
-	sm := session.ConnectSessionManager()
+	sm := session.ConnectSessionManager(*authConnStr)
 	defer sm.Close()
 
 	g := game.InitGodGameObject(dm)
@@ -39,7 +45,7 @@ func main() {
 	http.Handle("/metrics", promhttp.Handler())
 
 	http.HandleFunc("/game/ws", middleware.RecoverMiddleware(middleware.AccessLogMiddleware(
-		middleware.CORSMiddleware(middleware.SessionMiddleware(StartGame, sm)))))
+		middleware.CORSMiddleware(middleware.SessionMiddleware(http.HandlerFunc(StartGame), sm)))))
 
 	logger.Info("starting server at: ", 8082)
 	logger.Panic(http.ListenAndServe(":8082", nil))
