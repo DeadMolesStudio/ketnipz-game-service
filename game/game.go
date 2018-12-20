@@ -1,8 +1,7 @@
 package game
 
 import (
-	"game/database"
-	"game/models"
+	"math"
 	"sync"
 	"time"
 
@@ -11,11 +10,17 @@ import (
 	db "github.com/go-park-mail-ru/2018_2_DeadMolesStudio/database"
 	"github.com/go-park-mail-ru/2018_2_DeadMolesStudio/logger"
 
+	"game/database"
 	"game/metrics"
+	"game/models"
 )
 
 const (
 	MaxRooms = 100500
+
+	WinnerCoinsCoefficient = 0.5
+	LoserCoinsAmount       = 3
+	DrawCoinsCoefficient   = 0.3
 )
 
 var g *Game
@@ -194,6 +199,18 @@ func (g *Game) saveResults(r *Room) {
 			if err != nil {
 				logger.Errorf("failed to save player2 %v result: %v", player2.GameSessionID, err)
 			}
+
+			if player1Score == player2Score {
+				coins := int(math.Round(DrawCoinsCoefficient * float64(player1Score)))
+				err = database.ChangeUserCoinAmount(g.dm, player1Record.UID, coins)
+				if err != nil {
+					logger.Errorf("failed to save player1 %v coins: %v", player1.GameSessionID, err)
+				}
+				err = database.ChangeUserCoinAmount(g.dm, player2Record.UID, coins)
+				if err != nil {
+					logger.Errorf("failed to save player2 %v coins: %v", player2.GameSessionID, err)
+				}
+			}
 		case player1Score > player2Score:
 			player1Record.GameResult = models.Win
 			player2Record.GameResult = models.Loss
@@ -204,6 +221,16 @@ func (g *Game) saveResults(r *Room) {
 			err = database.UpdateStats(g.dm, player2Record)
 			if err != nil {
 				logger.Errorf("failed to save player2 %v result: %v", player2.GameSessionID, err)
+			}
+
+			coins := int(math.Round(WinnerCoinsCoefficient * float64(player1Score)))
+			err = database.ChangeUserCoinAmount(g.dm, player1Record.UID, coins)
+			if err != nil {
+				logger.Errorf("failed to save player1 %v coins: %v", player1.GameSessionID, err)
+			}
+			err = database.ChangeUserCoinAmount(g.dm, player2Record.UID, LoserCoinsAmount)
+			if err != nil {
+				logger.Errorf("failed to save player2 %v coins: %v", player2.GameSessionID, err)
 			}
 		case player1Score < player2Score:
 			player2Record.GameResult = models.Win
@@ -216,51 +243,55 @@ func (g *Game) saveResults(r *Room) {
 			if err != nil {
 				logger.Errorf("failed to save player1 %v result: %v", player1.GameSessionID, err)
 			}
+
+			coins := int(math.Round(WinnerCoinsCoefficient * float64(player2Score)))
+			err = database.ChangeUserCoinAmount(g.dm, player2Record.UID, coins)
+			if err != nil {
+				logger.Errorf("failed to save player2 %v coins: %v", player2.GameSessionID, err)
+			}
+			err = database.ChangeUserCoinAmount(g.dm, player1Record.UID, LoserCoinsAmount)
+			if err != nil {
+				logger.Errorf("failed to save player1 %v coins: %v", player1.GameSessionID, err)
+			}
 		}
 	case Disconnected:
 		left := r.engine.status.Info.(*Player)
-		switch {
-		case player1 != nil && player1.GameSessionID != left.GameSessionID:
-			// player 1 is winner
-			err := database.UpdateStats(g.dm, &models.Record{
-				UID:        player1.UserInfo.UID,
-				Record:     r.engine.state.Player1.Score,
-				GameResult: models.Win,
-			})
-			if err != nil {
-				logger.Errorf("failed to save player1 %v result: %v", player1.GameSessionID, err)
-			}
-			// player 2 is loser (left game)
-			err = database.UpdateStats(g.dm, &models.Record{
-				UID:        left.UserInfo.UID,
-				Record:     r.engine.state.Player2.Score,
-				GameResult: models.Loss,
-			})
-			if err != nil {
-				logger.Errorf("failed to save left player2 %v result: %v", left.GameSessionID, err)
-			}
-		case player2 != nil && player2.GameSessionID != left.GameSessionID:
-			// player 2 is winner
-			err := database.UpdateStats(g.dm, &models.Record{
-				UID:        player2.UserInfo.UID,
-				Record:     r.engine.state.Player2.Score,
-				GameResult: models.Win,
-			})
-			if err != nil {
-				logger.Errorf("failed to save player2 %v result: %v", player2.GameSessionID, err)
-			}
-			// player 1 is loser (left game)
-			err = database.UpdateStats(g.dm, &models.Record{
-				UID:        left.UserInfo.UID,
-				Record:     r.engine.state.Player1.Score,
-				GameResult: models.Loss,
-			})
-			if err != nil {
-				logger.Errorf("failed to save left player1 %v result: %v", left.GameSessionID, err)
-			}
-		default:
-			logger.Error("invalid data about left player and winner")
+		loserScore := 0
+		var winner *Player
+		winnerScore := 0
+		if player1 != nil && player1.GameSessionID != left.GameSessionID {
+			winner = player1
+			winnerScore = r.engine.state.Player1.Score
+			loserScore = r.engine.state.Player2.Score
+		} else {
+			winner = player2
+			winnerScore = r.engine.state.Player2.Score
+			loserScore = r.engine.state.Player1.Score
 		}
+		err := database.UpdateStats(g.dm, &models.Record{
+			UID:        winner.UserInfo.UID,
+			Record:     winnerScore,
+			GameResult: models.Win,
+		})
+		if err != nil {
+			logger.Errorf("failed to save winner %v result: %v", winner.GameSessionID, err)
+		}
+		coins := int(math.Round(WinnerCoinsCoefficient * float64(r.engine.state.Player1.Score)))
+		err = database.ChangeUserCoinAmount(g.dm, winner.UserInfo.UID, coins)
+		if err != nil {
+			logger.Errorf("failed to save winner %v coins: %v", winner.GameSessionID, err)
+		}
+		// player 2 is loser (left game)
+		err = database.UpdateStats(g.dm, &models.Record{
+			UID:        left.UserInfo.UID,
+			Record:     loserScore,
+			GameResult: models.Loss,
+		})
+		if err != nil {
+			logger.Errorf("failed to save left player2 %v result: %v", left.GameSessionID, err)
+		}
+	default:
+		logger.Error("invalid data about left player and winner")
 	}
 }
 
